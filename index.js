@@ -7,15 +7,75 @@ app.use(express.json());
 const PORT = 3000;
 
 const meetings = [
-  { id: 1, name: "meeting1" },
-  { id: 2, name: "meeting2" },
-  { id: 3, name: "meeting3" },
+  {
+    id: 1,
+    name: "Führungsteam-Meeting",
+    kategorie: "FTM",
+    datum: "2026-01-31",
+    zeit: "14.00 bis 17.00 Uhr",
+    lead: "Bereichsleiter Publishing",
+    teilnehmende: "Person 1, Person 2, Person 3, Person 4",
+    entschuldigte: "Person 5",
+    gäste: "Person 6",
+    protokoll: "Person 3",
+  },
+  {
+    id: 2,
+    name: "Verleger-Dialog",
+    kategorie: "VD",
+    datum: "2026-05-04",
+    zeit: "14.00 bis 16.30 Uhr",
+    lead: "CEO",
+    teilnehmende: "Person 1, Person 2, Person 3, Person 4",
+    entschuldigte: "Person 5",
+    gäste: "Person 6",
+    protokoll: "Person 3",
+  },
+  {
+    id: 3,
+    name: "Town-Hall Publishing",
+    kategorie: "THP",
+    datum: "2026-03-06",
+    zeit: "11.00 bis 13.00 Uhr",
+    lead: "Bereichsleiter Publishing",
+    teilnehmende: "Person 1, Person 2, Person 3, Person 4",
+    entschuldigte: "Person 5",
+    gäste: "Person 6",
+    protokoll: "Person 3",
+  },
 ];
 
 const tasks = [
-  { id: 1, name: "task1" },
-  { id: 2, name: "task2" },
-  { id: 3, name: "task3" },
+  {
+    id: 1,
+    name: "task1",
+    thema: "Zustellung",
+    erfasst: "2025-12-08",
+    verantwortlich: "Person 2",
+    fällig: "2026-02-24",
+    status: "erfasst",
+    auftragsbeschrieb: "",
+  },
+  {
+    id: 2,
+    name: "task1",
+    thema: "Einzelverkauf",
+    erfasst: "2025-06-30",
+    verantwortlich: "Person 6",
+    fällig: "2026-02-24",
+    status: "erfasst",
+    auftragsbeschrieb: "",
+  },
+  {
+    id: 3,
+    name: "task1",
+    thema: "Zustellung",
+    erfasst: "2026-01-10",
+    verantwortlich: "Person 5",
+    fällig: "2026-05-24",
+    status: "in Arbeit",
+    auftragsbeschrieb: "",
+  },
 ];
 
 app.get("/", (req, res) => {
@@ -25,7 +85,10 @@ app.get("/", (req, res) => {
 // Meetings //
 // Abfragen sämtlicher Meetings //
 app.get("/api/meetings", (req, res) => {
-  res.send(meetings);
+  const sortedMeetings = [...meetings].sort(
+    (a, b) => new Date(a.datum) - new Date(b.datum),
+  );
+  res.send(sortedMeetings);
 });
 
 // Abfragen eines bestimmten Meetings //
@@ -42,12 +105,21 @@ app.get("/api/meetings/:id", (req, res) => {
 app.post("/api/meetings", (req, res) => {
   const { error } = validateMeeting(req.body);
   if (error) {
-    return res.status(400).send(error.details[0].message);
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
   }
 
   const meeting = {
     id: meetings.length + 1,
     name: req.body.name,
+    kategorie: req.body.kategorie,
+    datum: req.body.datum,
+    zeit: req.body.zeit,
+    lead: req.body.lead,
+    teilnehmende: req.body.teilnehmende,
+    entschuldigte: req.body.entschuldigte,
+    gäste: req.body.gäste,
+    protokoll: req.body.protokoll,
   };
   meetings.push(meeting);
   res.send(meeting);
@@ -63,7 +135,8 @@ app.put("/api/meetings/:id", (req, res) => {
 
   const { error } = validateMeeting(req.body);
   if (error) {
-    return res.status(400).send(error.details[0].message);
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
   }
 
   meeting.name = req.body.name;
@@ -88,15 +161,26 @@ app.delete("/api/meetings/:id", (req, res) => {
 function validateMeeting(meeting) {
   const schema = Joi.object({
     name: Joi.string().min(3).required(),
+    kategorie: Joi.string().required(),
+    datum: Joi.date().iso().required(),
+    zeit: Joi.string().required(),
+    lead: Joi.string().required(),
+    teilnehmende: Joi.string().required(),
+    entschuldigte: Joi.string().allow(""),
+    gäste: Joi.string().allow(""),
+    protokoll: Joi.string().required(),
   });
 
-  return schema.validate(meeting);
+  return schema.validate(meeting, { abortEarly: false });
 }
 
 // Tasks //
 // Abfragen sämtlicher Tasks //
 app.get("/api/tasks", (req, res) => {
-  res.send(tasks);
+  const sortedTasks = [...tasks].sort(
+    (a, b) => new Date(b.fällig) - new Date(a.fällig),
+  );
+  res.send(sortedTasks);
 });
 
 // Abfragen eines bestimmten Tasks //
@@ -113,12 +197,19 @@ app.get("/api/tasks/:id", (req, res) => {
 app.post("/api/tasks", (req, res) => {
   const { error } = validateTask(req.body);
   if (error) {
-    return res.status(400).send(error.details[0].message);
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
   }
 
   const task = {
     id: tasks.length + 1,
     name: req.body.name,
+    thema: req.body.thema,
+    erfasst: req.body.erfasst,
+    verantwortlich: req.body.verantwortlich,
+    fällig: req.body.fällig,
+    status: req.body.status,
+    auftragsbeschrieb: req.body.auftragsbeschrieb,
   };
   tasks.push(task);
   res.send(task);
@@ -134,7 +225,8 @@ app.put("/api/tasks/:id", (req, res) => {
 
   const { error } = validateTask(req.body);
   if (error) {
-    return res.status(400).send(error.details[0].message);
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
   }
 
   task.name = req.body.name;
@@ -159,9 +251,15 @@ app.delete("/api/tasks/:id", (req, res) => {
 function validateTask(task) {
   const schema = Joi.object({
     name: Joi.string().min(3).required(),
+    thema: Joi.string().required(),
+    erfasst: Joi.date().iso().required(),
+    verantwortlich: Joi.string().required(),
+    fällig: Joi.date().iso().required(),
+    status: Joi.string().required(),
+    auftragsbeschrieb: Joi.string().allow(""),
   });
 
-  return schema.validate(task);
+  return schema.validate(task, { abortEarly: false });
 }
 
 // Terminal-Info, auf welchem Port der Server läuft //
