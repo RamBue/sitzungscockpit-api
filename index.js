@@ -78,6 +78,30 @@ const tasks = [
   },
 ];
 
+const participants = [
+  {
+    id: 1,
+    vorname: "Hans",
+    name: "Mustermann",
+    funktion: "Leiter Nutzermarkt",
+    mail: "hans.mustermann@chmedia.ch",
+  },
+  {
+    id: 2,
+    vorname: "Sophia",
+    name: "Example",
+    funktion: "Assistentin der Unternehmensleitung",
+    mail: "sophia.example@chmedia.ch",
+  },
+  {
+    id: 3,
+    vorname: "Ramona",
+    name: "Bürki",
+    funktion: "Leiterin Projekte und Planung Publishing",
+    mail: "ramona.buerki@chmedia.ch",
+  },
+];
+
 app.get("/", (req, res) => {
   res.send("Server läuft 🚀");
 });
@@ -260,6 +284,97 @@ function validateTask(task) {
   });
 
   return schema.validate(task, { abortEarly: false });
+}
+
+// Participants //
+// Abfragen sämtlicher Teilnehmenden //
+app.get("/api/participants", (req, res) => {
+  const sortedParticipants = [...participants].sort((a, b) =>
+    a.name.localeCompare(b.name, "de", { sensitivity: "base" }),
+  );
+  res.send(sortedParticipants);
+});
+
+// Abfragen eines bestimmten Teilnehmenden //
+app.get("/api/participants/:id", (req, res) => {
+  const participant = participants.find(
+    (c) => c.id === parseInt(req.params.id),
+  );
+  if (!participant)
+    return res
+      .status(404)
+      .send("Der Teilnehmende mit der gewünschten ID wurde nicht gefunden");
+  res.send(participant);
+});
+
+// Hinzufügen eines Teilnehmenden //
+app.post("/api/participants", (req, res) => {
+  const { error } = validateParticipants(req.body);
+  if (error) {
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
+  }
+
+  const participant = {
+    id: participants.length + 1,
+    vorname: req.body.vorname,
+    name: req.body.name,
+    funktion: req.body.funktion,
+    mail: req.body.mail,
+  };
+  participants.push(participant);
+  res.send(participant);
+});
+
+// Updaten eines Participants //
+app.put("/api/participants/:id", (req, res) => {
+  const participant = participants.find(
+    (c) => c.id === parseInt(req.params.id),
+  );
+  if (!participant)
+    return res
+      .status(404)
+      .send("Der Teilnehmende mit der gewünschten ID wurde nicht gefunden");
+
+  const { error } = validateParticipants(req.body);
+  if (error) {
+    const errors = error.details.map((detail) => detail.message);
+    return res.status(400).send(errors);
+  }
+
+  participant.vorname = req.body.vorname;
+  participant.name = req.body.name;
+  participant.funktion = req.body.funktion;
+  participant.mail = req.body.mail;
+  res.send(participant);
+});
+
+// Löschen eines Teilnehmenden //
+app.delete("/api/participants/:id", (req, res) => {
+  const participant = participants.find(
+    (c) => c.id === parseInt(req.params.id),
+  );
+  if (!participant)
+    return res
+      .status(404)
+      .send("Der Teilnehmende mit der gewünschten ID wurde nicht gefunden");
+
+  const index = participants.indexOf(participant);
+  participants.splice(index, 1);
+
+  res.send(participant);
+});
+
+// Validierung, ob Teilnehmenden-Angaben den Kriterien entsprechen //
+function validateParticipants(participant) {
+  const schema = Joi.object({
+    vorname: Joi.string().min(2).required(),
+    name: Joi.string().min(3).required(),
+    funktion: Joi.string().allow(""),
+    mail: Joi.string().email().required(),
+  });
+
+  return schema.validate(participant, { abortEarly: false });
 }
 
 // Terminal-Info, auf welchem Port der Server läuft //
